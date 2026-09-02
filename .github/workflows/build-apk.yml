@@ -40,8 +40,8 @@ jobs:
       - name: Rename Output APKs for Direct Download
         run: |
           mkdir -p dist
-          find app/build/outputs/apk/release -name "*.apk" -exec cp {} dist/BraveMusic-v1.0.0-release.apk \;
-          find app/build/outputs/apk/debug -name "*.apk" -exec cp {} dist/BraveMusic-v1.0.0-debug.apk \;
+          find app/build/outputs/apk/release -name "*.apk" -exec cp {} dist/BraveMusic-v1.0.1-release.apk \;
+          find app/build/outputs/apk/debug -name "*.apk" -exec cp {} dist/BraveMusic-v1.0.1-debug.apk \;
 
       - name: Upload Release APK as Workflow Artifact
         uses: actions/upload-artifact@v4
@@ -54,24 +54,24 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.0.0
-          name: "BraveMusic v1.0.0 (Samsung S24 FE / Android 14 Production Release)"
+          tag_name: v1.0.1
+          name: "BraveMusic v1.0.1 (Samsung S24 FE / Android 16 & One UI 8.5)"
           body: |
-            ### 🎵 YouTube Music Shielded Audio Player (Brave Music)
-            **Optimized for Samsung Galaxy S24 FE (Android 14 / One UI 6)**
+            ### 🎵 AI-Governed Shielded Audio Player (Brave Music)
+            **Optimized for Samsung Galaxy S24 FE (Android 16 / One UI 8.5)**
 
             #### 🚀 Highlights:
+            - **Targeted for Android 16 & One UI 8.5:** Upgraded User-Agent profile (`Chrome 134.x / Android 16 / SM-S711B`) ensuring flawless Google OAuth sign-in and token persistence.
             - **Ad-Free Stream & Shielding:** In-memory request interception dropping AdSense, DoubleClick, and video mid-rolls.
-            - **Google OAuth Persistence:** Standard Chrome User-Agent spoofing to bypass `disallowed_useragent` (Error 403) and keep library/playlists synced.
-            - **Android 14 Lock-Screen Controls:** Real-time MediaSession notification controls with high-res artwork.
+            - **Lock-Screen Controls:** Real-time MediaSession notification controls with high-res artwork.
             - **Built-in Sleep Timer:** Smooth 30-second exponential audio fade-out ($V(t) = e^{3(t-1)}$).
             - **Pure AMOLED Black UI:** `#000000` theme saving battery on Dynamic AMOLED 2X displays.
 
             #### 📥 Download & Install:
-            Download **`BraveMusic-v1.0.0-release.apk`** below, tap to install, and grant notification permission.
+            Download **`BraveMusic-v1.0.1-release.apk`** below, tap to install, and grant notification permission.
           files: |
-            dist/BraveMusic-v1.0.0-release.apk
-            dist/BraveMusic-v1.0.0-debug.apk
+            dist/BraveMusic-v1.0.1-release.apk
+            dist/BraveMusic-v1.0.1-debug.apk
           draft: false
           prerelease: false
         env:

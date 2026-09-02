@@ -1,7 +1,7 @@
 # AI-Governed Shielded Audio Player (PoC)
-### *Production-Ready, Ultra-Lightweight Android 14 Audio Architecture for Samsung Galaxy S24 FE*
+### *Production-Ready, Ultra-Lightweight Android 16 Audio Architecture for Samsung Galaxy S24 FE (One UI 8.5)*
 
-[![Android 14](https://img.shields.io/badge/Android-14%20(API%2034)-3DDC84?logo=android&logoColor=white)](https://developer.android.com/about/versions/14)
+[![Android 16](https://img.shields.io/badge/Android-16%20(One%20UI%208.5)-3DDC84?logo=android&logoColor=white)](https://developer.android.com/about/versions/16)
 [![Target Device](https://img.shields.io/badge/Target-Samsung%20Galaxy%20S24%20FE%20(SM--S711B)-1428A0?logo=samsung&logoColor=white)](https://www.samsung.com)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose%20%2B%20Material3-4285F4?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![Shielding](https://img.shields.io/badge/Shields-Ad--Free%20Stream%20Interception-FB542B?logo=brave&logoColor=white)](https://github.com/shibinantony/AI-Governed-Music-Player-PoC)
@@ -11,7 +11,7 @@
 
 ## 1. Architectural Blueprint & System Design
 
-Brave Music is an ultra-lightweight, ad-free wrapper around YouTube Music (`music.youtube.com`), engineered specifically for the **Samsung Galaxy S24 FE** running **Android 14 / One UI 6**. It bridges modern Jetpack Compose native surfaces with a hardened, sandboxed WebKit core.
+Brave Music is an ultra-lightweight, ad-free wrapper around YouTube Music (`music.youtube.com`), engineered specifically for the **Samsung Galaxy S24 FE** running **Android 16 / One UI 8.5**. It bridges modern Jetpack Compose native surfaces with a hardened, sandboxed WebKit core.
 
 ```mermaid
 graph TD

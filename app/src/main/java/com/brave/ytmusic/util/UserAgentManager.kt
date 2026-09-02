@@ -7,13 +7,13 @@ import android.webkit.WebSettings
  * Manages User-Agent configuration to ensure full Google OAuth login compatibility
  * without triggering the Google 403 "disallowed_useragent" security block.
  *
- * Specific target: Samsung Galaxy S24 FE (SM-S711B, Android 14 / One UI 6).
+ * Specific target: Samsung Galaxy S24 FE (SM-S711B, Android 16 / One UI 8.5).
  */
 object UserAgentManager {
 
-    private const val CHROME_VERSION = "124.0.6367.179"
+    private const val CHROME_VERSION = "134.0.6998.35"
     private const val DEVICE_MODEL = "SM-S711B"
-    private const val ANDROID_VERSION = "14"
+    private const val ANDROID_VERSION = "16"
 
     /**
      * Builds a clean standard Mobile Chrome user agent string.
