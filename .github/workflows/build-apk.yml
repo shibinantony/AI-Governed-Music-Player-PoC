@@ -31,27 +31,17 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Cache Gradle Packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Build Release & Debug APKs
-        run: ./gradlew assembleRelease assembleDebug --stacktrace
+        run: gradle assembleRelease assembleDebug --stacktrace
 
       - name: Rename Output APKs for Direct Download
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk dist/BraveMusic-v1.0.0-release.apk 2>/dev/null || cp app/build/outputs/apk/release/*.apk dist/BraveMusic-v1.0.0-release.apk
-          cp app/build/outputs/apk/debug/app-debug.apk dist/BraveMusic-v1.0.0-debug.apk 2>/dev/null || cp app/build/outputs/apk/debug/*.apk dist/BraveMusic-v1.0.0-debug.apk
+          find app/build/outputs/apk/release -name "*.apk" -exec cp {} dist/BraveMusic-v1.0.0-release.apk \;
+          find app/build/outputs/apk/debug -name "*.apk" -exec cp {} dist/BraveMusic-v1.0.0-debug.apk \;
 
       - name: Upload Release APK as Workflow Artifact
         uses: actions/upload-artifact@v4
