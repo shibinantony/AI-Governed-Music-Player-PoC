@@ -1,0 +1,88 @@
+name: Build Production Android APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build, Optimize & Publish APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle Packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Release & Debug APKs
+        run: ./gradlew assembleRelease assembleDebug --stacktrace
+
+      - name: Rename Output APKs for Direct Download
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/BraveMusic-v1.0.0-release.apk 2>/dev/null || cp app/build/outputs/apk/release/*.apk dist/BraveMusic-v1.0.0-release.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/BraveMusic-v1.0.0-debug.apk 2>/dev/null || cp app/build/outputs/apk/debug/*.apk dist/BraveMusic-v1.0.0-debug.apk
+
+      - name: Upload Release APK as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BraveMusic-Release-APK
+          path: dist/*.apk
+          retention-days: 30
+
+      - name: Publish Direct Release Download
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v1.0.0
+          name: "BraveMusic v1.0.0 (Samsung S24 FE / Android 14 Production Release)"
+          body: |
+            ### 🎵 YouTube Music Shielded Audio Player (Brave Music)
+            **Optimized for Samsung Galaxy S24 FE (Android 14 / One UI 6)**
+
+            #### 🚀 Highlights:
+            - **Ad-Free Stream & Shielding:** In-memory request interception dropping AdSense, DoubleClick, and video mid-rolls.
+            - **Google OAuth Persistence:** Standard Chrome User-Agent spoofing to bypass `disallowed_useragent` (Error 403) and keep library/playlists synced.
+            - **Android 14 Lock-Screen Controls:** Real-time MediaSession notification controls with high-res artwork.
+            - **Built-in Sleep Timer:** Smooth 30-second exponential audio fade-out ($V(t) = e^{3(t-1)}$).
+            - **Pure AMOLED Black UI:** `#000000` theme saving battery on Dynamic AMOLED 2X displays.
+
+            #### 📥 Download & Install:
+            Download **`BraveMusic-v1.0.0-release.apk`** below, tap to install, and grant notification permission.
+          files: |
+            dist/BraveMusic-v1.0.0-release.apk
+            dist/BraveMusic-v1.0.0-debug.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
