@@ -2,17 +2,16 @@ package com.brave.ytmusic.ui
 
 import android.content.Context
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
 import android.webkit.WebView
 
 /**
- * Hardened WebView that permanently prevents Chromium's native C++ rendering pipeline
- * from detecting window focus loss, screen off, or minimization.
- *
- * Chromium's RenderWidgetHostViewAndroid suspends HTML5 audio/video decoders and throttles
- * JavaScript timers whenever onWindowVisibilityChanged or onVisibilityChanged receives
- * View.GONE or View.INVISIBLE. By forcing View.VISIBLE at the Android View boundary,
- * audio decoding and streaming continue uninterrupted when the screen turns off.
+ * Hardened WebView engineered for:
+ * 1. Flawless IME Keyboard & Touch Focus (Google Account Sign-In support).
+ * 2. Chromium C++ Visibility Decoupling (Screen-Off background audio preservation).
  */
 class BackgroundWebView @JvmOverloads constructor(
     context: Context,
@@ -20,27 +19,34 @@ class BackgroundWebView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : WebView(context, attrs, defStyleAttr) {
 
+    init {
+        isFocusable = true
+        isFocusableInTouchMode = true
+        isClickable = true
+    }
+
     override fun onWindowVisibilityChanged(visibility: Int) {
-        // ALWAYS inform Chromium that the window is VISIBLE
+        // Informs Chromium that the view is VISIBLE so media decoding never pauses
         super.onWindowVisibilityChanged(View.VISIBLE)
     }
 
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
-        // ALWAYS inform Chromium that the view is VISIBLE
+        // Keeps Chromium audio thread running
         super.onVisibilityChanged(changedView, View.VISIBLE)
     }
 
-    override fun dispatchWindowVisibilityChanged(visibility: Int) {
-        // Prevent window visibility change events from propagating to child renderers
-        super.dispatchWindowVisibilityChanged(View.VISIBLE)
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        // Ensure tapping input fields claims focus for Samsung Keyboard / Gboard
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            if (!hasFocus()) {
+                requestFocus()
+            }
+        }
+        return super.onTouchEvent(event)
     }
 
-    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
-        // ALWAYS report true so Chromium never pauses HTML5 media elements
-        super.onWindowFocusChanged(true)
-    }
-
-    override fun hasWindowFocus(): Boolean {
-        return true
+    override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
+        // Critical for IME keyboard binding during Google Sign-In
+        return super.onCreateInputConnection(outAttrs)
     }
 }

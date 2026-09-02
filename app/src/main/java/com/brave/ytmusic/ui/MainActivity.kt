@@ -102,6 +102,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        // Ensure soft keyboard resizes the window and binds cleanly to input fields
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
         adBlockEngine = AdBlockEngine(applicationContext)
         checkNotificationPermission()
         startAndBindPlaybackService()
@@ -244,6 +247,8 @@ class MainActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
             setBackgroundColor(android.graphics.Color.BLACK)
+            isFocusable = true
+            isFocusableInTouchMode = true
 
             val bridge = WebInterfaceBridge(this)
             webBridge = bridge
@@ -268,6 +273,8 @@ class MainActivity : ComponentActivity() {
                 builtInZoomControls = false
                 setSupportZoom(false)
                 offscreenPreRaster = true
+                javaScriptCanOpenWindowsAutomatically = true
+                setSupportMultipleWindows(false)
 
                 // Enforce Mobile Chrome on Samsung S24 FE (SM-S711B) for Google OAuth
                 UserAgentManager.applyUserAgent(this, context)
