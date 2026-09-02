@@ -1,80 +1,142 @@
 /**
- * YouTube Music Shielded Core JavaScript Engine
- * Handles ad fast-forwarding, DOM stripping, AMOLED injection, native state synchronization,
- * Brave-grade background playback enforcement (Page Visibility & Lifecycle bypass), and WebAudio Equalizer DSP.
+ * YouTube Music Shielded Core Engine v1.0.3
+ * Total Ad-Shielding (YouTubei API JSON Sanitization + Fetch/XHR Proxy + DOM Blocker)
+ * Brave-Grade Background Playback (Page Visibility API Hook + RenderWidget Bypass)
+ * Studio WebAudio 5-Band Equalizer & Native Android Bridge
  */
 (function () {
-    if (window.__braveShieldInitialized) return;
-    window.__braveShieldInitialized = true;
+    if (window.__braveShieldCoreActive) return;
+    window.__braveShieldCoreActive = true;
 
-    // -------------------------------------------------------------
-    // 1. Brave-Grade Background Playback & Page Visibility Spoofing
-    // -------------------------------------------------------------
+    // =========================================================================
+    // 1. PAGE VISIBILITY & BACKGROUND AUDIO LOCKDOWN (SCREEN-OFF ENGINE)
+    // =========================================================================
     try {
-        // Permanently spoof document visibility so YouTube Music never knows the screen is off
-        Object.defineProperty(document, 'hidden', {
-            get: function () { return false; },
-            configurable: true
-        });
-        Object.defineProperty(document, 'visibilityState', {
-            get: function () { return 'visible'; },
-            configurable: true
-        });
-        Object.defineProperty(document, 'webkitVisibilityState', {
-            get: function () { return 'visible'; },
-            configurable: true
-        });
-        Object.defineProperty(document, 'webkitHidden', {
-            get: function () { return false; },
-            configurable: true
-        });
+        const fakeVisible = () => 'visible';
+        const fakeFalse = () => false;
+        const fakeTrue = () => true;
 
-        // Intercept and neutralize visibility change, pagehide, and blur event listeners
-        const originalAddEventListener = EventTarget.prototype.addEventListener;
+        Object.defineProperty(document, 'hidden', { get: fakeFalse, set: () => {}, configurable: true });
+        Object.defineProperty(document, 'visibilityState', { get: fakeVisible, set: () => {}, configurable: true });
+        Object.defineProperty(document, 'webkitHidden', { get: fakeFalse, set: () => {}, configurable: true });
+        Object.defineProperty(document, 'webkitVisibilityState', { get: fakeVisible, set: () => {}, configurable: true });
+        document.hasFocus = fakeTrue;
+
+        // Block visibility change and blur event listeners
+        const origAddEventListener = EventTarget.prototype.addEventListener;
         EventTarget.prototype.addEventListener = function (type, listener, options) {
             if (
                 type === 'visibilitychange' ||
                 type === 'webkitvisibilitychange' ||
                 type === 'pagehide' ||
+                type === 'blur' ||
                 type === 'freeze'
             ) {
-                // Trap and suppress YouTube's visibility pause triggers
-                return;
+                return; // Suppress YouTube visibility pause triggers
             }
-            return originalAddEventListener.call(this, type, listener, options);
+            return origAddEventListener.call(this, type, listener, options);
         };
 
-        // Suppress window.onblur from pausing audio
         window.onblur = null;
         document.onvisibilitychange = null;
     } catch (e) {
-        console.error('[BraveShield] Visibility spoof error:', e);
+        console.error('[BraveShield] Visibility Hook Error:', e);
     }
 
-    // -------------------------------------------------------------
-    // 2. AMOLED Dark Theme & Style Customization
-    // -------------------------------------------------------------
+    // =========================================================================
+    // 2. YOUTUBEI API JSON AD-PURGER (FETCH & XHR INTERCEPTOR)
+    // =========================================================================
+    function sanitizePlayerResponse(obj) {
+        if (!obj || typeof obj !== 'object') return obj;
+
+        // Purge ad placements, slots, and video ads
+        delete obj.adPlacements;
+        delete obj.adSlots;
+        delete obj.playerAds;
+        delete obj.adBreakHeartbeatParams;
+
+        if (obj.playbackTracking) {
+            delete obj.playbackTracking.videostatsPlaybackUrl;
+            delete obj.playbackTracking.videostatsDelayplayUrl;
+            delete obj.playbackTracking.videostatsWatchtimeUrl;
+            delete obj.playbackTracking.videostatsQoeUrl;
+            delete obj.playbackTracking.ptrackingUrl;
+            delete obj.playbackTracking.qoeUrl;
+            delete obj.playbackTracking.atrUrl;
+        }
+
+        return obj;
+    }
+
+    // Proxy window.fetch
+    const origFetch = window.fetch;
+    window.fetch = async function (...args) {
+        const response = await origFetch.apply(this, args);
+        const url = (args[0] && typeof args[0] === 'string') ? args[0] : (args[0] && args[0].url) ? args[0].url : '';
+
+        if (url.includes('/youtubei/v1/player') || url.includes('/youtubei/v1/next')) {
+            try {
+                const clone = response.clone();
+                const json = await clone.json();
+                const cleaned = sanitizePlayerResponse(json);
+                return new Response(JSON.stringify(cleaned), {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: response.headers
+                });
+            } catch (err) {
+                return response;
+            }
+        }
+        return response;
+    };
+
+    // Proxy XMLHttpRequest
+    const origOpen = XMLHttpRequest.prototype.open;
+    const origSend = XMLHttpRequest.prototype.send;
+
+    XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+        this._url = url;
+        return origOpen.call(this, method, url, ...rest);
+    };
+
+    XMLHttpRequest.prototype.send = function (body) {
+        if (this._url && (this._url.includes('/youtubei/v1/player') || this._url.includes('/youtubei/v1/next'))) {
+            this.addEventListener('readystatechange', function () {
+                if (this.readyState === 4 && this.status === 200) {
+                    try {
+                        const data = JSON.parse(this.responseText);
+                        const sanitized = sanitizePlayerResponse(data);
+                        Object.defineProperty(this, 'responseText', { value: JSON.stringify(sanitized), configurable: true });
+                        Object.defineProperty(this, 'response', { value: JSON.stringify(sanitized), configurable: true });
+                    } catch (e) {}
+                }
+            });
+        }
+        return origSend.call(this, body);
+    };
+
+    // Intercept ytInitialPlayerResponse
+    let rawInitialPlayerResponse = window.ytInitialPlayerResponse;
+    Object.defineProperty(window, 'ytInitialPlayerResponse', {
+        get: () => rawInitialPlayerResponse,
+        set: (val) => {
+            rawInitialPlayerResponse = sanitizePlayerResponse(val);
+        },
+        configurable: true
+    });
+
+    // =========================================================================
+    // 3. AMOLED BLACK THEME & PROMO SUPPRESSION CSS
+    // =========================================================================
     const amoledStyle = document.createElement('style');
     amoledStyle.id = 'brave-amoled-theme';
     amoledStyle.textContent = `
-        /* Enforce pure AMOLED black (#000000) across all YouTube Music containers */
-        :root,
-        html,
-        body,
-        ytmusic-app,
-        ytmusic-app-layout,
-        ytmusic-browse-response,
-        ytmusic-player-page,
-        ytmusic-nav-bar,
-        ytmusic-player-bar,
-        ytmusic-search-box,
-        #player-bar-background,
-        #nav-bar-background,
-        .background-gradient,
-        ytmusic-item-section-renderer,
-        ytmusic-section-list-renderer,
-        ytmusic-immersive-header-renderer,
-        ytmusic-background-overlay-renderer {
+        :root, html, body, ytmusic-app, ytmusic-app-layout, ytmusic-browse-response,
+        ytmusic-player-page, ytmusic-nav-bar, ytmusic-player-bar, ytmusic-search-box,
+        #player-bar-background, #nav-bar-background, .background-gradient,
+        ytmusic-item-section-renderer, ytmusic-section-list-renderer,
+        ytmusic-immersive-header-renderer, ytmusic-background-overlay-renderer {
             background-color: #000000 !important;
             background: #000000 !important;
             --ytmusic-color-black1: #000000 !important;
@@ -84,7 +146,6 @@
             --ytmusic-overlay-background-color: rgba(0, 0, 0, 0.95) !important;
         }
 
-        /* Suppress promo elements, upsell banners, and premium trial modals */
         ytmusic-mealbar-promo-renderer,
         ytmusic-upsell-dialog-renderer,
         ytmusic-guide-promo-entry-renderer,
@@ -93,7 +154,11 @@
         ytmusic-pivot-bar-item-renderer[tab-id="SPunlimited"],
         #upsell-dialog,
         ytmusic-toast-item-renderer:has(a[href*="premium"]),
-        tp-yt-paper-dialog:has(a[href*="premium"]) {
+        tp-yt-paper-dialog:has(a[href*="premium"]),
+        .video-ads,
+        .ytp-ad-module,
+        .ytp-ad-overlay-container,
+        ytmusic-ad-slot-renderer {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
@@ -101,7 +166,6 @@
             pointer-events: none !important;
         }
 
-        /* Optimize player bar touch targets */
         ytmusic-player-bar {
             border-top: 1px solid #181818 !important;
         }
@@ -112,34 +176,32 @@
             (document.head || document.documentElement).appendChild(amoledStyle);
         }
     }
-
     applyAmoledTheme();
     document.addEventListener('DOMContentLoaded', applyAmoledTheme);
 
-    // -------------------------------------------------------------
-    // 3. Ad-Block & Video Fast-Forward Interceptor
-    // -------------------------------------------------------------
+    // =========================================================================
+    // 4. INSTANT AD FAST-FORWARD & SKIP BUTTON AUTOMATION
+    // =========================================================================
     function killAds() {
         const player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
         const video = document.querySelector('video');
 
-        // Check if player indicates an active ad
         if (player && player.classList && player.classList.contains('ad-showing')) {
-            if (video && !isNaN(video.duration) && video.duration > 0) {
-                // Instantly advance video to the end and accelerate rate
-                video.currentTime = video.duration;
+            if (video) {
+                video.muted = true;
+                if (!isNaN(video.duration) && video.duration > 0) {
+                    video.currentTime = video.duration;
+                }
                 video.playbackRate = 16.0;
             }
-            // Trigger skip button if present
             const skipButton = document.querySelector(
-                '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, .videoAdUiSkipButton'
+                '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, .videoAdUiSkipButton, button.ytp-ad-skip-button-icon'
             );
             if (skipButton) {
                 skipButton.click();
             }
         }
 
-        // Close overlay ad cards
         const overlayAds = document.querySelectorAll(
             '.ytp-ad-overlay-close-button, .ytp-ad-message-container, .ytp-ad-action-interstitial'
         );
@@ -149,7 +211,7 @@
         });
     }
 
-    setInterval(killAds, 250);
+    setInterval(killAds, 50);
 
     const observer = new MutationObserver(() => {
         killAds();
@@ -164,9 +226,9 @@
         attributeFilter: ['class']
     });
 
-    // -------------------------------------------------------------
-    // 4. WebAudio Studio-Grade Equalizer DSP Pipeline
-    // -------------------------------------------------------------
+    // =========================================================================
+    // 5. WEBAUDIO STUDIO-GRADE 5-BAND EQUALIZER DSP PIPELINE
+    // =========================================================================
     let audioCtx = null;
     let sourceNode = null;
     let eqFilters = [];
@@ -174,7 +236,6 @@
     let preampGainNode = null;
     let isEqInitialized = false;
 
-    // Standard 5-band frequencies: 60Hz, 230Hz, 910Hz, 3.6kHz, 14kHz
     const bandFrequencies = [60, 230, 910, 3600, 14000];
 
     function initWebAudioEqualizer() {
@@ -193,13 +254,11 @@
             if (!sourceNode && video) {
                 sourceNode = audioCtx.createMediaElementSource(video);
 
-                // Create Bass Boost Low-shelf filter
                 bassBoostFilter = audioCtx.createBiquadFilter();
                 bassBoostFilter.type = 'lowshelf';
                 bassBoostFilter.frequency.value = 80;
                 bassBoostFilter.gain.value = 0;
 
-                // Create 5 peaking filters
                 eqFilters = bandFrequencies.map((freq, index) => {
                     const filter = audioCtx.createBiquadFilter();
                     if (index === 0) {
@@ -215,11 +274,9 @@
                     return filter;
                 });
 
-                // Create Preamp Gain node
                 preampGainNode = audioCtx.createGain();
                 preampGainNode.gain.value = 1.0;
 
-                // Connect Chain: source -> bassBoost -> filter[0] -> ... -> filter[4] -> preamp -> destination
                 let currentNode = sourceNode;
                 currentNode.connect(bassBoostFilter);
                 currentNode = bassBoostFilter;
@@ -234,12 +291,9 @@
 
                 isEqInitialized = true;
             }
-        } catch (e) {
-            // AudioContext already connected or cross-origin handled
-        }
+        } catch (e) {}
     }
 
-    // Auto unlock audio context on user interaction
     ['click', 'touchstart', 'keydown'].forEach(evt => {
         document.addEventListener(evt, function () {
             if (audioCtx && audioCtx.state === 'suspended') {
@@ -249,9 +303,9 @@
         }, { once: true });
     });
 
-    // -------------------------------------------------------------
-    // 5. Media State & Metadata Bridge
-    // -------------------------------------------------------------
+    // =========================================================================
+    // 6. METADATA & PLAYBACK STATE SYNCHRONIZATION
+    // =========================================================================
     let lastState = {
         title: '',
         artist: '',
@@ -322,13 +376,10 @@
                     duration,
                     position
                 );
-            } catch (e) {
-                console.error('[BraveShield] Bridge notification failed:', e);
-            }
+            } catch (e) {}
         }
     }
 
-    // Attach listeners to video element
     function attachMediaListeners() {
         const video = document.querySelector('video');
         if (!video) return;
@@ -339,13 +390,13 @@
         });
 
         video.addEventListener('pause', function () {
-            // Background auto-resume safeguard: If pause happened unexpectedly without user intention
+            // Auto-resume if screen turned off unexpectedly
             if (!intentionalNativePause && lastState.isPlaying && !video.ended) {
                 setTimeout(() => {
                     if (video.paused && !intentionalNativePause) {
                         video.play();
                     }
-                }, 100);
+                }, 50);
             }
             notifyNativeBridge();
         });
@@ -353,9 +404,9 @@
 
     setInterval(attachMediaListeners, 1000);
 
-    // -------------------------------------------------------------
-    // 6. Exposed Control Interface (Callable from Native Kotlin)
-    // -------------------------------------------------------------
+    // =========================================================================
+    // 7. EXPOSED CONTROL APIS
+    // =========================================================================
     window.bravePlayer = {
         play: function () {
             intentionalNativePause = false;
@@ -410,7 +461,6 @@
             }
         },
         setEqualizer: function (bandGainsArray, bassBoostGain, preampGain) {
-            // bandGainsArray: e.g. [0, 2, 4, 2, 0] in dB (-12 to +12)
             initWebAudioEqualizer();
             if (audioCtx && audioCtx.state === 'suspended') {
                 audioCtx.resume();
@@ -429,7 +479,6 @@
             }
 
             if (preampGainNode && typeof preampGain === 'number') {
-                // Preamp gain in multiplier (0.5 to 2.0)
                 preampGainNode.gain.value = Number(preampGain) || 1.0;
             }
         }

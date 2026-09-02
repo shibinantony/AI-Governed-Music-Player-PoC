@@ -68,10 +68,13 @@ import com.brave.ytmusic.util.UserAgentManager
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
+
 class MainActivity : ComponentActivity() {
 
     private lateinit var adBlockEngine: AdBlockEngine
-    private var webView: WebView? = null
+    private var webView: BackgroundWebView? = null
     private var webBridge: WebInterfaceBridge? = null
     private var playbackService: PlaybackService? = null
     private var isServiceBound = false
@@ -234,8 +237,8 @@ class MainActivity : ComponentActivity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun createConfiguredWebView(context: Context): WebView {
-        return WebView(context).apply {
+    private fun createConfiguredWebView(context: Context): BackgroundWebView {
+        return BackgroundWebView(context).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -273,6 +276,20 @@ class MainActivity : ComponentActivity() {
             // Expose Native Bridge
             addJavascriptInterface(bridge, "AndroidBridge")
 
+            // Inject Document-Start Script (Runs synchronously before ANY web script executes)
+            val scriptContent = loadShieldScript()
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                try {
+                    WebViewCompat.addDocumentStartJavaScript(
+                        this,
+                        scriptContent,
+                        setOf("*")
+                    )
+                } catch (e: Exception) {
+                    // Fallback to runtime evaluation
+                }
+            }
+
             // Inject DOM Shield & AdBlock Interception Client
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
@@ -307,13 +324,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun injectShieldScript(targetWebView: WebView) {
-        try {
+    private fun loadShieldScript(): String {
+        return try {
             val inputStream = assets.open("inject.js")
-            val script = BufferedReader(InputStreamReader(inputStream)).use { it.readText() }
-            targetWebView.evaluateJavascript(script, null)
+            BufferedReader(InputStreamReader(inputStream)).use { it.readText() }
         } catch (e: Exception) {
-            // Script load fallback handled silently
+            ""
+        }
+    }
+
+    private fun injectShieldScript(targetWebView: WebView) {
+        val script = loadShieldScript()
+        if (script.isNotEmpty()) {
+            targetWebView.evaluateJavascript(script, null)
         }
     }
 

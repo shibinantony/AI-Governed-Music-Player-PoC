@@ -62,6 +62,14 @@ class AdBlockEngine(private val context: Context) {
         }
     }
 
+    private fun isWhitelisted(host: String): Boolean {
+        return host == "music.youtube.com" ||
+                host == "accounts.google.com" ||
+                host.endsWith(".googlevideo.com") ||
+                host.endsWith(".ytimg.com") ||
+                host.endsWith(".gstatic.com")
+    }
+
     /**
      * Determines whether an outgoing Web resource request should be blocked.
      */
@@ -70,6 +78,22 @@ class AdBlockEngine(private val context: Context) {
 
         val host = uri.host?.lowercase() ?: return false
         val fullUrl = uri.toString().lowercase()
+
+        // Inspect googlevideo media streams for ad segments
+        if (host.endsWith(".googlevideo.com")) {
+            val query = uri.query?.lowercase() ?: ""
+            if (
+                query.contains("adformat=") ||
+                query.contains("ad_type=") ||
+                query.contains("ctier=l") ||
+                query.contains("ad_cpn=") ||
+                query.contains("ad_v=") ||
+                query.contains("gis=")
+            ) {
+                return true // Drop video/audio ad segments
+            }
+            return false // Allow genuine music stream
+        }
 
         // Critical Whitelist: Never block essential YouTube streaming and account domains
         if (isWhitelisted(host)) {
@@ -102,14 +126,6 @@ class AdBlockEngine(private val context: Context) {
         }
 
         return false
-    }
-
-    private fun isWhitelisted(host: String): Boolean {
-        return host == "music.youtube.com" ||
-                host == "accounts.google.com" ||
-                host.endsWith(".googlevideo.com") ||
-                host.endsWith(".ytimg.com") ||
-                host.endsWith(".gstatic.com")
     }
 
     /**

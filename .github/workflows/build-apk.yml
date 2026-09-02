@@ -40,8 +40,8 @@ jobs:
       - name: Rename Output APKs for Direct Download
         run: |
           mkdir -p dist
-          find app/build/outputs/apk/release -name "*.apk" -exec cp {} dist/BraveMusic-v1.0.2-release.apk \;
-          find app/build/outputs/apk/debug -name "*.apk" -exec cp {} dist/BraveMusic-v1.0.2-debug.apk \;
+          find app/build/outputs/apk/release -name "*.apk" -exec cp {} dist/BraveMusic-v1.0.3-release.apk \;
+          find app/build/outputs/apk/debug -name "*.apk" -exec cp {} dist/BraveMusic-v1.0.3-debug.apk \;
 
       - name: Upload Release APK as Workflow Artifact
         uses: actions/upload-artifact@v4
@@ -54,23 +54,23 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.0.2
-          name: "BraveMusic v1.0.2 (True Background Playback & Studio Equalizer)"
+          tag_name: v1.0.3
+          name: "BraveMusic v1.0.3 (Total Ad-Shielding & Persistent Background Engine)"
           body: |
-            ### 🎵 AI-Governed Shielded Audio Player (Brave Music v1.0.2)
+            ### 🎵 AI-Governed Shielded Audio Player (Brave Music v1.0.3)
             **Optimized for Samsung Galaxy S24 FE (Android 16 / One UI 8.5)**
 
-            #### 🚀 What's New in v1.0.2:
-            - 🛡️ **True Background Playback (Brave Browser Engine):** Overridden Page Visibility API (`document.visibilityState`, `document.hidden`) and neutralized event traps (`visibilitychange`, `pagehide`, `blur`) — music plays continuously when the screen is locked/turned off.
-            - 🎚️ **Studio-Grade 5-Band Equalizer:** Built-in WebAudio DSP biquad filter chain (`60Hz`, `230Hz`, `910Hz`, `3.6kHz`, `14kHz`), dedicated **Bass Booster**, preamp gain, and 8 instant presets (*Flat, Bass Booster, EDM, Rock, Pop, Vocal, Hip-Hop, Classical*).
-            - 🔋 **Enhanced WifiLock & WakeLock:** Prevents Samsung One UI aggressive network sleep from interrupting background streaming.
-            - 📱 **Google OAuth & AMOLED Black:** Retained Samsung S24 FE Android 16 Chrome 134 User-Agent and `#000000` AMOLED dark theme.
+            #### 🚀 Crucial Fixes & Architectural Upgrades in v1.0.3:
+            - 🛡️ **Total Ad-Shielding (YouTubei API Purger + Fetch/XHR Proxy):** Intercepts all `/youtubei/v1/player` and `/youtubei/v1/next` responses and purges `adPlacements`, `playerAds`, and `adSlots` from memory before YouTube's player ever parses them. Drops `googlevideo` ad-segment streams.
+            - ⚡ **Document-Start Script Injection:** Injects shield code synchronously at document creation (`WebViewCompat.addDocumentStartJavaScript`) before any YouTube scripts or ad modules can register.
+            - 📱 **True Screen-Off Playback (`BackgroundWebView`):** Custom WebView overriding Chromium's `RenderWidgetHostViewAndroid` visibility signals (`onWindowVisibilityChanged`), permanently preventing media engine suspension when the screen turns off.
+            - 🎚️ **Studio 5-Band Equalizer & Bass Booster:** Full WebAudio parametric equalizer with presets (*Flat, Bass Booster, EDM, Rock, Pop, Vocal, Hip-Hop, Classical*).
 
             #### 📥 Download & Install:
-            Download **`BraveMusic-v1.0.2-release.apk`** below, tap to install, and grant notification permission.
+            Download **`BraveMusic-v1.0.3-release.apk`** below, tap to install, and enjoy ad-free, screen-off music playback!
           files: |
-            dist/BraveMusic-v1.0.2-release.apk
-            dist/BraveMusic-v1.0.2-debug.apk
+            dist/BraveMusic-v1.0.3-release.apk
+            dist/BraveMusic-v1.0.3-debug.apk
           draft: false
           prerelease: false
         env:
