@@ -78,6 +78,11 @@ class WebInterfaceBridge(webView: WebView) {
         evaluateScript("window.bravePlayer && window.bravePlayer.setVolume($clamped);")
     }
 
+    fun setEqualizer(bands: FloatArray, bassBoost: Float, preampGain: Float) {
+        val bandsJson = bands.joinToString(prefix = "[", postfix = "]") { it.toString() }
+        evaluateScript("window.bravePlayer && window.bravePlayer.setEqualizer($bandsJson, $bassBoost, $preampGain);")
+    }
+
     fun injectShieldScript(scriptContent: String) {
         evaluateScript(scriptContent)
     }

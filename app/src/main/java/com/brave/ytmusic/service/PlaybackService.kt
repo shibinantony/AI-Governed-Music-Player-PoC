@@ -49,6 +49,7 @@ class PlaybackService : Service() {
     private lateinit var audioManager: AudioManager
     private lateinit var notificationManager: NotificationManager
     private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
 
     private var audioFocusRequest: AudioFocusRequest? = null
     private var bridge: WebInterfaceBridge? = null
@@ -67,17 +68,25 @@ class PlaybackService : Service() {
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        initWakeLock()
+        initWakeLocks()
         initMediaSession()
         createNotificationChannel()
     }
 
-    private fun initWakeLock() {
+    private fun initWakeLocks() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
             "BraveMusic:PlaybackWakeLock"
         ).apply {
+            setReferenceCounted(false)
+        }
+
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
+        wifiLock = wifiManager?.createWifiLock(
+            android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF,
+            "BraveMusic:PlaybackWifiLock"
+        )?.apply {
             setReferenceCounted(false)
         }
     }
@@ -338,13 +347,23 @@ class PlaybackService : Service() {
     private fun acquireWakeLock() {
         wakeLock?.let {
             if (!it.isHeld) {
-                it.acquire(10 * 60 * 1000L) // 10 min safety timeout
+                it.acquire(60 * 60 * 1000L) // 60 min safety timeout
+            }
+        }
+        wifiLock?.let {
+            if (!it.isHeld) {
+                it.acquire()
             }
         }
     }
 
     private fun releaseWakeLock() {
         wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
+        }
+        wifiLock?.let {
             if (it.isHeld) {
                 it.release()
             }

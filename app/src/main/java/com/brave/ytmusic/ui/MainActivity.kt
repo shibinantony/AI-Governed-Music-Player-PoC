@@ -30,8 +30,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -51,8 +55,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.brave.ytmusic.adblock.AdBlockEngine
 import com.brave.ytmusic.bridge.WebInterfaceBridge
+import com.brave.ytmusic.equalizer.EqualizerManager
 import com.brave.ytmusic.service.PlaybackService
 import com.brave.ytmusic.timer.SleepTimerManager
+import com.brave.ytmusic.ui.components.EqualizerSheet
 import com.brave.ytmusic.ui.components.SleepTimerSheet
 import com.brave.ytmusic.ui.theme.AmoledBlack
 import com.brave.ytmusic.ui.theme.BraveMusicTheme
@@ -129,11 +135,18 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun MainScreen() {
         var showSleepTimerSheet by remember { mutableStateOf(false) }
+        var showEqualizerSheet by remember { mutableStateOf(false) }
+
         val scope = rememberCoroutineScope()
         val sleepTimerManager = remember {
             SleepTimerManager(scope) { webBridge }
         }
+        val equalizerManager = remember {
+            EqualizerManager { webBridge }
+        }
+
         val timerState by sleepTimerManager.timerState.collectAsState()
+        val eqState by equalizerManager.equalizerState.collectAsState()
 
         BackHandler(enabled = webView?.canGoBack() == true) {
             webView?.goBack()
@@ -157,21 +170,50 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Sleep Timer Quick Access Floating Action Button
-                FloatingActionButton(
-                    onClick = { showSleepTimerSheet = true },
+                // Bottom-Right Quick Controls: Equalizer & Sleep Timer
+                Row(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(bottom = 72.dp, end = 16.dp)
-                        .size(44.dp),
-                    shape = CircleShape,
-                    containerColor = if (timerState.isActive) YtmRed else Color(0x99222222),
-                    contentColor = Color.White
+                        .padding(bottom = 72.dp, end = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Bedtime,
-                        contentDescription = "Sleep Timer",
-                        modifier = Modifier.size(22.dp)
+                    // Equalizer Button
+                    FloatingActionButton(
+                        onClick = { showEqualizerSheet = true },
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        containerColor = if (eqState.selectedPresetName != "Flat") YtmRed else Color(0xCC222222),
+                        contentColor = Color.White
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Equalizer,
+                            contentDescription = "Studio Equalizer",
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    // Sleep Timer Button
+                    FloatingActionButton(
+                        onClick = { showSleepTimerSheet = true },
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        containerColor = if (timerState.isActive) YtmRed else Color(0xCC222222),
+                        contentColor = Color.White
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bedtime,
+                            contentDescription = "Sleep Timer",
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+
+                if (showEqualizerSheet) {
+                    EqualizerSheet(
+                        equalizerManager = equalizerManager,
+                        onDismissRequest = { showEqualizerSheet = false }
                     )
                 }
 
@@ -222,6 +264,7 @@ class MainActivity : ComponentActivity() {
                 displayZoomControls = false
                 builtInZoomControls = false
                 setSupportZoom(false)
+                offscreenPreRaster = true
 
                 // Enforce Mobile Chrome on Samsung S24 FE (SM-S711B) for Google OAuth
                 UserAgentManager.applyUserAgent(this, context)
